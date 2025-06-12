@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Paris - Live Eiffel Tower Stream | Real-time Paris Views</title>
+    <meta name="description" content="Watch live HD streaming from Paris rooftop with direct view of the Eiffel Tower. Experience real-time Paris weather, timelapses, and special moments.">
+    <meta name="keywords" content="Paris webcam, Eiffel Tower live, Paris live stream, Paris weather, France webcam">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://webcam-paris.com/">
+    <meta property="og:title" content="Webcam Paris - Live Eiffel Tower Stream">
+    <meta property="og:description" content="Watch live HD streaming from Paris rooftop with direct view of the Eiffel Tower">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://webcam-paris.com/">
+    <meta property="twitter:title" content="Webcam Paris - Live Eiffel Tower Stream">
+    <meta property="twitter:description" content="Watch live HD streaming from Paris rooftop with direct view of the Eiffel Tower">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Webcam Paris",
+      "url": "https://webcam-paris.com",
+      "description": "Live streaming webcam with view of the Eiffel Tower in Paris, France"
+    }
+    </script>
+    
+    <!-- HLS.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.10/hls.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --text-color: #2c3e50;
+            --light-bg: #f8f9fa;
+            --white: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background: var(--light-bg);
+        }
+
+        /* Header */
+        header {
+            background: var(--white);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--secondary-color);
+        }
+
+        .mobile-menu {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+	    color: #1c45d9;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Video Section */
+        .video-section {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 3rem;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+        }
+
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none; /* Add this line */
+        }
+
+        .video-overlay.show {
+            opacity: 1;
+            pointer-events: auto; /* Only allow interaction when overlay is visible */
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--light-bg);
+            border-radius: 10px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: #27ae60;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Weather Widget */
+        .weather-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .weather-widget,
+        .info-panel {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .weather-widget h3,
+        .info-panel h3 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .weather-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .weather-icon {
+            font-size: 3rem;
+        }
+
+        .weather-details h4 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .weather-details p {
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Content Sections */
+        .content-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .content-card {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .content-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .content-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .content-card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--secondary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--secondary-color);
+            border: 2px solid var(--secondary-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            opacity: 0.8;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--secondary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--white);
+                flex-direction: column;
+                padding: 1rem 2rem;
+                box-shadow: var(--shadow);
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .mobile-menu {
+                display: block;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .weather-section {
+                grid-template-columns: 1fr;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .video-section {
+                padding: 1rem;
+            }
+
+            nav {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .status-bar {
+                flex-direction: column;
+                gap: 0.5rem;
+                text-align: center;
+            }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            :root {
+                --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="" class="logo">🗼 Webcam Paris</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="" class="active">Live Stream</a></li>
+                <li><a href="timelapses.html">Timelapses</a></li>
+                <li><a href="gallery.html">Gallery</a></li>
+            </ul>
+            <button class="mobile-menu" id="mobileMenu" aria-label="Toggle navigation menu">
+                ☰
+            </button>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>Live from Paris</h1>
+            <p>Experience the magic of Paris with our 24/7 live HD stream featuring a view of the iconic Eiffel Tower from our exclusive rooftop location.</p>
+        </section>
+
+        <section class="video-section">
+            <div class="video-container">
+                <div class="video-wrapper">
+                    <video 
+                        id="video" 
+                        controls 
+                        autoplay 
+                        muted 
+                        playsinline
+                        allowfullscreen
+                        poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDgwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMmMzZTUwIi8+Cjx0ZXh0IHg9IjQwMCIgeT0iMjI1IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0Ij5QYXJpcyBMaXZlIFN0cmVhbTwvdGV4dD4KPC9zdmc+"
+                        aria-label="Live Paris webcam stream"
+                    >
+                        <p>Your browser does not support HTML5 video.</p>
+                    </video>
+                    <div class="video-overlay" id="videoOverlay">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Connecting...</span>
+                </div>
+                <div class="stream-info">
+                    <span id="lastUpdate">Last updated: --</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="weather-section">
+            <div class="weather-widget">
+                <h3>🌤️ Current Weather in Paris</h3>
+                <div class="weather-content" id="weatherContent">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>📍 Camera Location</h3>
+                <p><strong>Location:</strong> South West Paris</p>
+                <p><strong>View:</strong> Direct Eiffel Tower perspective</p>
+                <p><strong>Height:</strong> 30 meters above street level</p>
+                <p><strong>Direction:</strong> Northwest facing</p>
+                <button class="btn btn-outline" onclick="shareStream()">Share Stream</button>
+            </div>
+        </section>
+
+        <section class="content-sections">
+            <div class="content-card">
+                <h3>🎬 Daily Timelapses</h3>
+                <p>Watch Paris transform throughout the day with our stunning timelapse videos capturing sunrise, sunset, and the city's rhythm.</p>
+                <a href="https://webcam-paris.com/timelapses.html" class="btn">View Timelapses</a>
+            </div>
+            
+            <div class="content-card">
+                <h3>✨ Best Moments</h3>
+                <p>Experience special events like fireworks on Bastille Day, the Patrouille de France flyovers, and seasonal celebrations.</p>
+                <a href="https://webcam-paris.com/gallery.html" class="btn">Explore Gallery</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#privacy">Privacy Policy</a>
+                <a href="#terms">Terms of Service</a>
+                <a href="#contact">Contact</a>
+                <a href="#api">API Access</a>
+            </div>
+            <p>&copy; 2025 Webcam Paris. All rights reserved. | Made with ❤️ in Paris</p>
+        </div>
+    </footer>
+
+    <script>
+        // HLS Video Player Setup
+        const video = document.getElementById('video');
+        const videoOverlay = document.getElementById('videoOverlay');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const lastUpdate = document.getElementById('lastUpdate');
+        
+        // Show loading overlay initially
+        videoOverlay.classList.add('show');
+        
+        function initializeVideoPlayer() {
+            const videoSrc = 'https://webcam-paris.com/hls/stream.m3u8';
+            
+            if (Hls.isSupported()) {
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
+                });
+                
+                hls.loadSource(videoSrc);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    updateStatus('online', 'Live Stream Active');
+                    videoOverlay.classList.remove('show');
+                    updateLastUpdate();
+                });
+                
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        updateStatus('offline', 'Stream Offline');
+                        console.error('HLS Error:', data);
+                    }
+                });
+                
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = videoSrc;
+                video.addEventListener('loadeddata', function() {
+                    updateStatus('online', 'Live Stream Active');
+                    videoOverlay.classList.remove('show');
+                    updateLastUpdate();
+                });
+                
+                video.addEventListener('error', function() {
+                    updateStatus('offline', 'Stream Offline');
+                });
+            } else {
+                updateStatus('offline', 'Browser not supported');
+                videoOverlay.innerHTML = '<p>Your browser does not support HLS streaming. Please try a different browser.</p>';
+            }
+        }
+        
+        function updateStatus(status, text) {
+            statusDot.className = `status-dot ${status}`;
+            statusText.textContent = text;
+        }
+        
+        function updateLastUpdate() {
+            const now = new Date();
+            lastUpdate.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+        }
+        
+        // Weather API Integration
+        async function fetchWeather() {
+            try {
+                // Using a free weather API (replace with your API key)
+                const response = await fetch('https://api.openweathermap.org/data/2.5/weather?q=Paris&appid=9393ff701ada56eb0e753b9d76684cb2&units=metric');
+                
+                if (!response.ok) {
+                    throw new Error('Weather data unavailable');
+                }
+                
+                const data = await response.json();
+                displayWeather(data);
+            } catch (error) {
+                // Fallback weather display
+                displayFallbackWeather();
+            }
+        }
+        
+        function displayWeather(data) {
+            const weatherContent = document.getElementById('weatherContent');
+            const iconMap = {
+                '01d': '☀️', '01n': '🌙', '02d': '⛅', '02n': '☁️',
+                '03d': '☁️', '03n': '☁️', '04d': '☁️', '04n': '☁️',
+                '09d': '🌧️', '09n': '🌧️', '10d': '🌦️', '10n': '🌧️',
+                '11d': '⛈️', '11n': '⛈️', '13d': '❄️', '13n': '❄️',
+                '50d': '🌫️', '50n': '🌫️'
+            };
+            
+            const icon = iconMap[data.weather[0].icon] || '🌤️';
+            
+            weatherContent.innerHTML = `
+                <div class="weather-icon">${icon}</div>
+                <div class="weather-details">
+                    <h4>${Math.round(data.main.temp)}°C</h4>
+                    <p>${data.weather[0].description}</p>
+                    <p>Feels like ${Math.round(data.main.feels_like)}°C</p>
+                    <p>Humidity: ${data.main.humidity}%</p>
+                </div>
+            `;
+        }
+        
+        function displayFallbackWeather() {
+            const weatherContent = document.getElementById('weatherContent');
+            weatherContent.innerHTML = `
+                <div class="weather-icon">🌤️</div>
+                <div class="weather-details">
+                    <h4>--°C</h4>
+                    <p>Weather data unavailable</p>
+                    <p>Please check back later</p>
+                </div>
+            `;
+        }
+        
+        // Mobile Navigation
+        const mobileMenu = document.getElementById('mobileMenu');
+        const navLinks = document.getElementById('navLinks');
+        
+        mobileMenu.addEventListener('click', function() {
+            navLinks.classList.toggle('active');
+        });
+        
+        // Share Function
+        function shareStream() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Webcam Paris - Live Eiffel Tower Stream',
+                    url: window.location.href
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    alert('Stream URL copied to clipboard!');
+                });
+            }
+        }
+        
+        // PWA Installation
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+        
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                });
+            } else {
+                alert('Add this site to your home screen for the best experience!');
+            }
+        }
+        
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeVideoPlayer();
+            fetchWeather();
+            
+            // Update weather every 30 minutes
+            setInterval(fetchWeather, 30 * 60 * 1000);
+            
+            // Update status every 5 minutes
+            setInterval(updateLastUpdate, 5 * 60 * 1000);
+        });
+        
+        // Page visibility API for performance
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Pause or reduce activity when tab is not visible
+                video.pause();
+            } else {
+                // Resume when tab becomes visible
+                video.play();
+            }
+        });
+        
+        // Analytics (placeholder - replace with your tracking code)
+        function trackEvent(action, category = 'Stream') {
+            // Google Analytics 4 example:
+            // gtag('event', action, { event_category: category });
+            console.log(`Analytics: ${category} - ${action}`);
+        }
+        
+        // Track video events
+        video.addEventListener('play', () => trackEvent('play'));
+        video.addEventListener('pause', () => trackEvent('pause'));
+        video.addEventListener('ended', () => trackEvent('ended'));
+    </script>
+</body>
+</html>
