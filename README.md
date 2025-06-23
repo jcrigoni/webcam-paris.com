@@ -28,3 +28,13 @@ tail -f /home/jc/dev/wp-local/logs/stream.log
 
 How to check for the log files size in the VPS:
 ls -lih /usr/local/nginx/html/live/logs
+
+Where to put timelapse videos in the VPS:
+scp video-to-load.mp4 root@93.127.163.199:/usr/local/nginx/html/live/videos/
+
+How to re-encode a timelapse video to H.264 (AVC)  (for linux reading purpose)
+go to the directory containing the mp4 file and type:
+ffmpeg -i input.mp4 -c:v libx264 -c:a aac output_h264.mp4
+input.mp4 = input video name (change according to your file)
+output.mp4 = output video name  (change according to your file)
+
