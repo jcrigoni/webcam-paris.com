@@ -20,3 +20,11 @@ stream_monitor.sh  stream.sh
 stream_monitor.sh main automation script, run at boot as an enabled service, does health checks every 30 sec
 stream.sh fall back little stream script, use it only when working on stream_monitor.sh
 
+How to check the stream flow in the local server:
+tail -f /home/jc/dev/wp-local/logs/ffmpeg_output.log
+
+How to check the health check flow in the local server:
+tail -f /home/jc/dev/wp-local/logs/stream.log
+
+How to check for the log files size in the VPS:
+ls -lih /usr/local/nginx/html/live/logs
