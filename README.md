@@ -61,4 +61,12 @@ root@srv855970:/usr/local/nginx/html/live/captures
 How to SSH as jc user:
 ssh jc@93.127.163.199
 
+How to rsync the local directory (t14s) with active directory in VPS:
+ rsync -avz --exclude '*/' --prune-empty-dirs /home/jcrigoni/projects/webcam-paris.com/ root@93.127.163.199:/usr/local/nginx/html/live/
 
+
+Read the README.md file. You can see that there are new features. I have created a script in the local server that capture an image every 10 minutes during daylight time, everyday. These pictures are transfered to the VPS through SCP protocol. The directory where the image land in the VPS is /usr/local/nginx/html/live/captures . In this directory the shell script create a new "today directory" with this format: YYYY-MM-DD . Each today directory contains all the images of the day under this format: image_YYYY-MM-DD_HH-1mm-ss.jpg . You are an expert webmaster and software programmer. The first thing you are going to do is replace the containt of the "gallery section" in the Single Page Application and fill it instead with today's images. A new picture is created every 10 minutes so the website should be flexible to display a new one when available in the /usr/local/nginx/html/live/captures/YYYY-MM-DD folder. The website displays only today's image, means today it displays today's images and tomorrow, il displays tomorrow's images and on and on.
+
+
+VPS crontab -e run generate_index.sh every 10mn
+*/10 * * * * /usr/local/nginx/html/live/generate_index.sh >/dev/null 2>&1

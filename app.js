@@ -33,6 +33,7 @@ class ParisWebcamApp {
         this.initializeVideoPlayer();
         this.initializeWeather();
         this.initializeLazyLoading();
+        this.initializeImageGallery();
         this.setupPerformanceOptimizations();
         
         console.log('App initialized successfully');
@@ -503,6 +504,10 @@ class ParisWebcamApp {
         if (page === 'timelapses' || page === 'gallery') {
             this.loadLazyMedia();
         }
+        
+        if (page === 'gallery') {
+            this.loadTodaysImages();
+        }
     }
 
     /**
@@ -742,6 +747,276 @@ class ParisWebcamApp {
     }
 
     /**
+     * Initialize image gallery for today's captures
+     */
+    initializeImageGallery() {
+        this.galleryUpdateInterval = null;
+        this.currentImages = [];
+        
+        // Load gallery when gallery page is accessed
+        if (this.currentPage === 'gallery') {
+            this.loadTodaysImages();
+        }
+        
+        // Set up auto-refresh every 10 minutes
+        this.galleryUpdateInterval = setInterval(() => {
+            if (this.currentPage === 'gallery') {
+                this.loadTodaysImages();
+            }
+        }, 10 * 60 * 1000);
+    }
+
+    /**
+     * Load today's captured images
+     */
+    async loadTodaysImages() {
+        const galleryStatus = document.getElementById('galleryStatus');
+        const imageGallery = document.getElementById('imageGallery');
+        
+        if (!galleryStatus || !imageGallery) return;
+
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const capturesPath = `/live/captures/${today}/`;
+            
+            console.log(`Loading images for today: ${today}`);
+            console.log(`Captures path: ${capturesPath}`);
+            
+            // Update status
+            galleryStatus.querySelector('.status-text').textContent = 'Loading today\'s images...';
+            
+            // First try to fetch a directory listing file if it exists
+            let images = await this.fetchFromDirectoryListing(capturesPath);
+            
+            // If no directory listing, fall back to checking individual images
+            if (images.length === 0) {
+                console.log('No directory listing found, checking individual images...');
+                images = await this.fetchTodaysImageList(capturesPath);
+            }
+            
+            console.log(`Found ${images.length} images:`, images);
+            
+            if (images.length === 0) {
+                this.displayNoImagesMessage();
+                return;
+            }
+            
+            // Sort images by time (newest first)
+            images.sort((a, b) => b.localeCompare(a));
+            
+            // Update gallery if images have changed
+            if (JSON.stringify(images) !== JSON.stringify(this.currentImages)) {
+                this.currentImages = images;
+                this.displayImages(images, capturesPath);
+            }
+            
+            // Update status
+            galleryStatus.querySelector('.status-text').textContent = `${images.length} images captured today`;
+            document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+            
+        } catch (error) {
+            console.error('Failed to load today\'s images:', error);
+            this.displayErrorMessage();
+        }
+    }
+
+    /**
+     * Try to fetch images from a directory listing file
+     */
+    async fetchFromDirectoryListing(capturesPath) {
+        try {
+            // Try to fetch a simple directory listing file
+            const response = await fetch(`${capturesPath}index.txt`, {
+                headers: { 'Cache-Control': 'no-cache' }
+            });
+            
+            if (response.ok) {
+                const text = await response.text();
+                const images = text.split('\n')
+                    .filter(line => line.trim().length > 0)
+                    .filter(line => line.endsWith('.jpg'))
+                    .map(line => line.trim());
+                
+                console.log('Found directory listing with images:', images);
+                return images;
+            }
+        } catch (e) {
+            console.log('No directory listing file found');
+        }
+        return [];
+    }
+
+    /**
+     * Fetch list of today's images
+     */
+    async fetchTodaysImageList(capturesPath) {
+        const images = [];
+        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        
+        // Generate possible image names for today (every 10 minutes from 6 AM to 8 PM)
+        const startHour = 6;
+        const endHour = 20;
+        
+        // Create array of all possible image times for today
+        const possibleImages = [];
+        for (let hour = startHour; hour <= endHour; hour++) {
+            for (let minute = 0; minute < 60; minute += 10) {
+                const imageTime = new Date();
+                imageTime.setHours(hour, minute, 0, 0);
+                
+                // Only check for images from times that have already passed
+                if (imageTime <= now) {
+                    const timeStr = `${hour.toString().padStart(2, '0')}-${minute.toString().padStart(2, '0')}-00`;
+                    const filename = `image_${today}_${timeStr}.jpg`;
+                    possibleImages.push(filename);
+                }
+            }
+        }
+        
+        // Check each possible image in parallel with timeout
+        const imageChecks = possibleImages.map(async (filename) => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+                
+                const response = await fetch(`${capturesPath}${filename}`, { 
+                    method: 'HEAD',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    return filename;
+                }
+            } catch (e) {
+                // Image doesn't exist or network error, return null
+            }
+            return null;
+        });
+        
+        // Wait for all checks to complete
+        const results = await Promise.all(imageChecks);
+        
+        // Filter out null results
+        const existingImages = results.filter(filename => filename !== null);
+        
+        console.log(`Found ${existingImages.length} images for today:`, existingImages);
+        
+        return existingImages;
+    }
+
+    /**
+     * Display images in the gallery
+     */
+    displayImages(images, basePath) {
+        const imageGallery = document.getElementById('imageGallery');
+        if (!imageGallery) return;
+        
+        imageGallery.innerHTML = '';
+        
+        images.forEach((filename, index) => {
+            const imageItem = document.createElement('div');
+            imageItem.className = 'gallery-item';
+            
+            // Extract time from filename for display
+            const timeMatch = filename.match(/image_\d{4}-\d{2}-\d{2}_(\d{2})-(\d{2})-(\d{2})\.jpg/);
+            const timeDisplay = timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : 'Unknown time';
+            
+            imageItem.innerHTML = `
+                <div class="gallery-item__image-container">
+                    <img 
+                        class="gallery-item__image" 
+                        data-src="${basePath}${filename}"
+                        alt="Paris webcam capture at ${timeDisplay}"
+                        loading="lazy"
+                    >
+                    <div class="gallery-item__overlay">
+                        <button class="gallery-item__fullscreen" onclick="openImageFullscreen('${basePath}${filename}')">
+                            📱 View Full Size
+                        </button>
+                    </div>
+                </div>
+                <div class="gallery-item__info">
+                    <span class="gallery-item__time">${timeDisplay}</span>
+                    <span class="gallery-item__index">${index + 1}/${images.length}</span>
+                </div>
+            `;
+            
+            imageGallery.appendChild(imageItem);
+        });
+        
+        // Initialize lazy loading for new images
+        this.initializeLazyLoadingForGallery();
+    }
+
+    /**
+     * Display message when no images are available
+     */
+    displayNoImagesMessage() {
+        const imageGallery = document.getElementById('imageGallery');
+        const galleryStatus = document.getElementById('galleryStatus');
+        
+        if (imageGallery) {
+            imageGallery.innerHTML = `
+                <div class="gallery-message">
+                    <h3>No captures available yet today</h3>
+                    <p>Images are captured every 10 minutes during daylight hours (6 AM - 8 PM).</p>
+                    <p>Check back during daylight hours to see today's captures!</p>
+                </div>
+            `;
+        }
+        
+        if (galleryStatus) {
+            galleryStatus.querySelector('.status-text').textContent = 'No images captured today yet';
+        }
+    }
+
+    /**
+     * Display error message
+     */
+    displayErrorMessage() {
+        const imageGallery = document.getElementById('imageGallery');
+        const galleryStatus = document.getElementById('galleryStatus');
+        
+        if (imageGallery) {
+            imageGallery.innerHTML = `
+                <div class="gallery-message gallery-message--error">
+                    <h3>Unable to load images</h3>
+                    <p>There was an issue loading today's captures. Please try refreshing the page.</p>
+                </div>
+            `;
+        }
+        
+        if (galleryStatus) {
+            galleryStatus.querySelector('.status-text').textContent = 'Error loading images';
+        }
+    }
+
+    /**
+     * Initialize lazy loading specifically for gallery images
+     */
+    initializeLazyLoadingForGallery() {
+        if ('IntersectionObserver' in window) {
+            const galleryObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        this.loadMediaElement(entry.target);
+                        galleryObserver.unobserve(entry.target);
+                    }
+                });
+            }, {
+                rootMargin: '100px 0px',
+                threshold: 0.01
+            });
+
+            const galleryImages = document.querySelectorAll('.gallery-item__image[data-src]');
+            galleryImages.forEach(img => galleryObserver.observe(img));
+        }
+    }
+
+    /**
      * Cleanup resources
      */
     destroy() {
@@ -755,6 +1030,10 @@ class ParisWebcamApp {
         
         if (this.statusUpdateInterval) {
             clearInterval(this.statusUpdateInterval);
+        }
+        
+        if (this.galleryUpdateInterval) {
+            clearInterval(this.galleryUpdateInterval);
         }
     }
 }
@@ -785,6 +1064,49 @@ function shareStream() {
     } else {
         // Fallback to prompt
         prompt('Copy this URL:', url);
+    }
+}
+
+/**
+ * Open image in fullscreen
+ */
+function openImageFullscreen(imageSrc) {
+    const fullscreenOverlay = document.createElement('div');
+    fullscreenOverlay.className = 'fullscreen-overlay';
+    fullscreenOverlay.innerHTML = `
+        <div class="fullscreen-content">
+            <button class="fullscreen-close" onclick="closeImageFullscreen()">&times;</button>
+            <img class="fullscreen-image" src="${imageSrc}" alt="Full size capture">
+        </div>
+    `;
+    
+    document.body.appendChild(fullscreenOverlay);
+    document.body.style.overflow = 'hidden';
+    
+    // Close on background click
+    fullscreenOverlay.addEventListener('click', (e) => {
+        if (e.target === fullscreenOverlay) {
+            closeImageFullscreen();
+        }
+    });
+    
+    // Close on escape key
+    document.addEventListener('keydown', function escapeHandler(e) {
+        if (e.key === 'Escape') {
+            closeImageFullscreen();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    });
+}
+
+/**
+ * Close fullscreen image
+ */
+function closeImageFullscreen() {
+    const fullscreenOverlay = document.querySelector('.fullscreen-overlay');
+    if (fullscreenOverlay) {
+        fullscreenOverlay.remove();
+        document.body.style.overflow = '';
     }
 }
 

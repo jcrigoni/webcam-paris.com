@@ -196,33 +196,19 @@
         <!-- Gallery Section -->
         <section class="page page--hidden" id="galleryPage" data-page="gallery">
             <div class="hero">
-                <h1 class="hero__title">Best Moments Gallery</h1>
-                <p class="hero__description">A collection of our most stunning captures from the Paris webcam.</p>
+                <h1 class="hero__title">Today's Captures</h1>
+                <p class="hero__description">Live captures from today, updated every 10 minutes during daylight hours.</p>
             </div>
 
-            <div class="media-grid">
-                <div class="media-item">
-                    <h3 class="media-item__title">Eiffel Tower Focus</h3>
-                    <video 
-                        class="media-video" 
-                        controls 
-                        preload="none"
-                        data-src="videos/output-eiffel.mp4"
-                    >
-                        <source data-src="videos/output-eiffel.mp4" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
+            <div class="gallery-info">
+                <div class="gallery-status" id="galleryStatus">
+                    <span class="status-text">Loading today's images...</span>
+                    <span class="last-update" id="lastUpdate"></span>
                 </div>
-                
-                <div class="media-item">
-                    <h3 class="media-item__title">Sunset over Paris</h3>
-                    <img 
-                        class="media-image" 
-                        data-src="videos/couche-soleil.jpg" 
-                        alt="Beautiful sunset over Paris with Eiffel Tower silhouette"
-                        loading="lazy"
-                    >
-                </div>
+            </div>
+
+            <div class="image-gallery" id="imageGallery">
+                <!-- Today's images will be loaded here dynamically -->
             </div>
         </section>
 
