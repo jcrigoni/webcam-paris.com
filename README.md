@@ -58,4 +58,7 @@ xdg-open image_2025-06-23_16-05-49.jpg (replace image name)
 How to access daylight captures in VPS:
 root@srv855970:/usr/local/nginx/html/live/captures
 
+How to SSH as jc user:
+ssh jc@93.127.163.199
+
 
