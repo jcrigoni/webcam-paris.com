@@ -38,3 +38,24 @@ ffmpeg -i input.mp4 -c:v libx264 -c:a aac output_h264.mp4
 input.mp4 = input video name (change according to your file)
 output.mp4 = output video name  (change according to your file)
 
+How to access crontab in local server:
+ssh jc@192.168.1.59
+crontab -e
+
+How to access capture logs:
+/home/jc/dev/wp-local/logs/log_capture.txt
+
+How to access daylight captures in the local server:
+/home/jc/dev/wp-local/captures/
+
+How to access capture_daylight.sh Shell script:
+/home/jc/scripts/capture_daylight.sh
+
+How to download and check a daylight capture :
+scp jc@192.168.1.59:/home/jc/dev/wp-local/captures/2025-06-24/image_2025-06-24_10-47-51.jpg .  (replace subfolder and image names)
+xdg-open image_2025-06-23_16-05-49.jpg (replace image name)
+
+How to access daylight captures in VPS:
+root@srv855970:/usr/local/nginx/html/live/captures
+
+
