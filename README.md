@@ -65,8 +65,165 @@ How to rsync the local directory (t14s) with active directory in VPS:
  rsync -avz --exclude '*/' --prune-empty-dirs /home/jcrigoni/projects/webcam-paris.com/ root@93.127.163.199:/usr/local/nginx/html/live/
 
 
-Read the README.md file. You can see that there are new features. I have created a script in the local server that capture an image every 10 minutes during daylight time, everyday. These pictures are transfered to the VPS through SCP protocol. The directory where the image land in the VPS is /usr/local/nginx/html/live/captures . In this directory the shell script create a new "today directory" with this format: YYYY-MM-DD . Each today directory contains all the images of the day under this format: image_YYYY-MM-DD_HH-1mm-ss.jpg . You are an expert webmaster and software programmer. The first thing you are going to do is replace the containt of the "gallery section" in the Single Page Application and fill it instead with today's images. A new picture is created every 10 minutes so the website should be flexible to display a new one when available in the /usr/local/nginx/html/live/captures/YYYY-MM-DD folder. The website displays only today's image, means today it displays today's images and tomorrow, il displays tomorrow's images and on and on.
 
 
-VPS crontab -e run generate_index.sh every 10mn
-*/10 * * * * /usr/local/nginx/html/live/generate_index.sh >/dev/null 2>&1
+---
+
+```markdown
+# WEBCAM-PARIS.COM
+
+This project streams a real-time rooftop view of Paris via a 4K webcam.  
+It uses a local server to handle video capture and encoding, and a remote VPS to host the live stream and display the website.
+
+---
+
+## 🔧 System Overview
+
+- **Camera**: 4K, 12MP rooftop webcam
+- **Local Server**: Ubuntu, Ryzen 3 – runs FFmpeg and health monitoring scripts
+- **Remote VPS**: Ubuntu (Hostinger) – runs Nginx with RTMP module to serve the stream
+- **Control**: All systems managed via SSH from a third computer
+
+---
+
+## 🧩 Technologies Used
+
+- `ffmpeg` – for video encoding and streaming
+- `nginx` + `nginx-rtmp-module` – for handling RTMP and HLS streaming
+- `cron` – for timed tasks (e.g., daylight captures)
+- `rsync`, `scp` – for file synchronization
+
+---
+
+## 📁 Project Structure
+
+### VPS: `/usr/local/nginx/html/live/`
+Contains website and video files:
+```
+
+CLAUDE.md  app.js  index.html  logs/  styles.css  videos/
+
+````
+
+### Local: `/home/jc/dev/wp-local/`
+Mirror of the VPS directory for local development.
+
+### Scripts (Local): `/home/jc/scripts/`
+- `stream_monitor.sh` → Main script, runs at boot, checks stream health every 30s
+- `stream.sh` → Backup script used for testing only
+
+---
+
+## 📡 Stream Monitoring
+
+### Check FFmpeg output (local server)
+```bash
+tail -f /home/jc/dev/wp-local/logs/ffmpeg_output.log
+````
+
+### Check stream health logs
+
+```bash
+tail -f /home/jc/dev/wp-local/logs/stream.log
+```
+
+### Capture log file
+
+```bash
+cat /home/jc/dev/wp-local/logs/log_capture.txt
+```
+
+---
+
+## 🎞️ Timelapse Videos
+
+### Upload a timelapse video to VPS:
+
+```bash
+scp video-to-load.mp4 root@93.127.163.199:/usr/local/nginx/html/live/videos/
+```
+
+### Re-encode to H.264 (Linux-friendly format):
+
+```bash
+ffmpeg -i input.mp4 -c:v libx264 -c:a aac output_h264.mp4
+```
+
+---
+
+## 📸 Daylight Image Captures
+
+### Local capture folder:
+
+```
+/home/jc/dev/wp-local/captures/
+```
+
+### VPS capture folder:
+
+```
+/usr/local/nginx/html/live/captures/
+```
+
+### View a capture (download and open):
+
+```bash
+scp jc@192.168.1.59:/home/jc/dev/wp-local/captures/2025-06-24/image_2025-06-24_10-47-51.jpg .
+xdg-open image_2025-06-24_10-47-51.jpg
+```
+
+### Daylight capture script:
+
+```
+/home/jc/scripts/capture_daylight.sh
+```
+
+---
+
+## 🔁 File Sync
+
+### Rsync from local project to VPS:
+
+```bash
+rsync -avz --exclude '*/' --prune-empty-dirs /home/jcrigoni/projects/webcam-paris.com/ root@93.127.163.199:/usr/local/nginx/html/live/
+```
+
+---
+
+## 🔐 SSH Access
+
+### Local server (user: jc)
+
+```bash
+ssh jc@192.168.1.59
+```
+
+### Remote VPS (users: root or jc)
+
+```bash
+ssh root@93.127.163.199
+ssh jc@93.127.163.199
+```
+
+---
+
+## 📆 Crontab (on local server)
+
+Edit scheduled tasks:
+
+```bash
+ssh jc@192.168.1.59
+crontab -e
+```
+
+---
+
+## 📌 Notes
+
+* Always check logs when debugging issues.
+* Use `stream.sh` only if `stream_monitor.sh` is disabled or under maintenance.
+* Place videos in the `videos/` folder and images in `captures/` for web access.
+
+```
+
+---
