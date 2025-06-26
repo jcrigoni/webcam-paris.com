@@ -161,6 +161,82 @@ Pre-built ad spaces with clear commenting:
   - If content appears stuck to one side, check container max-width and centering
 - **Sidebar overlapping content**: Ensure using flexbox layout, not fixed positioning
 
+## Gallery Feature Implementation (Today's Captures)
+
+### Overview
+Attempted implementation of dynamic gallery showing today's captured images from the VPS capture system. Images are captured every 10 minutes during daylight hours (6 AM - 8 PM) and stored in `/usr/local/nginx/html/live/captures/YYYY-MM-DD/` with naming format `image_YYYY-MM-DD_HH-mm-ss.jpg`.
+
+### Technical Implementation
+
+#### HTML Structure (index.html)
+- Replaced static gallery content with dynamic "Today's Captures" section
+- Added gallery status display (`#galleryStatus`) and image container (`#imageGallery`)
+- Added manual reload button for debugging (`#reloadImagesBtn`)
+
+#### JavaScript Functionality (app.js)
+- **initializeImageGallery()**: Sets up gallery initialization and 10-minute auto-refresh
+- **loadTodaysImages()**: Main function to fetch and display today's images
+- **fetchFromDirectoryListing()**: Attempts to load image list from `index.txt` file
+- **fetchTodaysImageList()**: Fallback method using HEAD requests to detect images
+- **displayImages()**: Creates responsive grid layout with hover effects and fullscreen capability
+- **Error handling**: Shows appropriate messages for no images or network errors
+
+#### CSS Styling (styles.css)
+- Responsive grid layout: `grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))`
+- Mobile-first approach: 1 column on mobile, multi-column on desktop
+- Image cards with hover effects and overlay buttons
+- Fullscreen modal with backdrop and close controls
+- Status indicators and error state styling
+
+#### Server-Side Scripts
+
+**generate_index.sh**: 
+- Generates `index.txt` file listing all JPG files in today's directory
+- Fixes file permissions (644 for web accessibility)
+- Runs via crontab every 10 minutes: `*/10 * * * * /usr/local/nginx/html/live/generate_index.sh`
+- Cleans up old index files (older than 2 days)
+
+**fix_permissions.sh**:
+- One-time script to fix permissions for all existing captures
+- Sets 644 permissions for all JPG and index.txt files
+- Sets 755 permissions for directories
+
+### Path Structure
+- **VPS Directory**: `/usr/local/nginx/html/live/captures/YYYY-MM-DD/`
+- **Web Path**: `/captures/YYYY-MM-DD/` (relative to document root)
+- **Index File**: `/captures/YYYY-MM-DD/index.txt`
+- **Images**: `/captures/YYYY-MM-DD/image_YYYY-MM-DD_HH-mm-ss.jpg`
+
+### Verified Working Components
+✅ **Server Access**: Images accessible via HTTPS (confirmed with curl)
+✅ **Directory Listing**: index.txt generation and web accessibility
+✅ **File Permissions**: Fixed with automated scripts
+✅ **HTTPS Redirects**: Nginx properly redirects HTTP to HTTPS
+✅ **Image Serving**: Individual images serve correctly (HTTP 200 OK)
+
+### Current Issues
+❌ **mobile streaming**: very long buffering on iphones and androids
+
+### Debug Information Added
+- Console logging for gallery initialization and page detection
+- Detailed fetch request logging with response status
+- Manual reload button for testing (fixed onclick handler)
+- Status indicators showing loading/error states
+
+### Alternative Approaches to Consider
+1. **Server-Side Rendering**: Generate HTML gallery server-side instead of client-side JavaScript
+2. **Direct Directory Listing**: Use nginx autoindex module for automatic directory listing
+3. **API Endpoint**: Create PHP/Node.js endpoint to return JSON list of images
+4. **Static File Generation**: Generate static HTML gallery files alongside images
+5. **Simplified JavaScript**: Remove SPA complexity and use direct page-based approach
+
+### Files Modified
+- `index.html`: Gallery section HTML structure
+- `app.js`: Gallery JavaScript functionality and debugging
+- `styles.css`: Gallery responsive CSS styling
+- `generate_index.sh`: Server-side directory listing script
+- `fix_permissions.sh`: Permission fixing script
+
 ### Layout Architecture
 The layout uses a modern responsive approach:
 1. **HTML Structure**: 
