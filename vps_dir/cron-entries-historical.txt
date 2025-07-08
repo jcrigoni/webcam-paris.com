@@ -1,0 +1,20 @@
+# Historical Gallery Generation Cron Entries for Paris Webcam VPS
+# Add these entries to the crontab on the VPS server
+
+# Update historical galleries every 10 minutes (runs alongside existing capture and index generation)
+*/10 * * * * /usr/local/nginx/html/live/update-historical-galleries.sh >> /var/log/webcam-historical-galleries.log 2>&1
+
+# Alternative: Run once per hour during daylight hours for better performance
+# 0 6-20 * * * /usr/local/nginx/html/live/update-historical-galleries.sh >> /var/log/webcam-historical-galleries.log 2>&1
+
+# Generate all galleries for the last 30 days (run once daily at 2 AM)
+0 2 * * * /usr/local/nginx/html/live/historical-gallery-generator.sh >> /var/log/webcam-historical-galleries.log 2>&1
+
+# Files to deploy to VPS:
+# - historical-gallery-generator.sh → /usr/local/nginx/html/live/historical-gallery-generator.sh
+# - update-historical-galleries.sh → /usr/local/nginx/html/live/update-historical-galleries.sh
+# - Create directory: /usr/local/nginx/html/live/html-galleries/
+
+# Make scripts executable on VPS:
+# chmod +x /usr/local/nginx/html/live/historical-gallery-generator.sh
+# chmod +x /usr/local/nginx/html/live/update-historical-galleries.sh

@@ -25,11 +25,17 @@ now_ts=$(date +%s)
 # === IF ACTUAL TIME IS BETWEEN SUNRISE AND SUNSET, THEN SNAP IMAGE ===
 if [[ $now_ts -ge $sunrise_ts && $now_ts -le $sunset_ts ]]; then
     today=$(date +%F)
-    mkdir -p "$OUTPUT_DIR/$today"
+    year=$(date +%Y)
+    month=$(date +%m)
+    day=$(date +%d)
+    
+    # Create hierarchical directory structure: YYYY/MM/DD
+    local_capture_dir="$OUTPUT_DIR/$year/$month/$day"
+    mkdir -p "$local_capture_dir"
     
     # Create temporary filename for initial capture
     temp_filename="temp_image_$(date +%F_%H-%M-%S).jpg"
-    temp_output="$OUTPUT_DIR/$today/$temp_filename"
+    temp_output="$local_capture_dir/$temp_filename"
     
     # Capture the image
     ffmpeg -y -rtsp_transport tcp -i "$RTSP_URL" -frames:v 1 -q:v 20 "$temp_output"
@@ -39,7 +45,7 @@ if [[ $now_ts -ge $sunrise_ts && $now_ts -le $sunset_ts ]]; then
     
     # Create final filename with brightness
     filename="image_$(date +%F_%H-%M-%S)_${brightness}.jpg"
-    output="$OUTPUT_DIR/$today/$filename"
+    output="$local_capture_dir/$filename"
     
     # Rename to final filename with brightness
     mv "$temp_output" "$output"
@@ -51,9 +57,10 @@ else
 fi
 
 # === CREATE DIRECTORY ON VPS ===
-ssh -i ~/.ssh/id_ed25519_nopass vps "mkdir -p $VPS_PATH/$today && chmod 755 $VPS_PATH/$today"
+vps_capture_dir="$VPS_PATH/$year/$month/$day"
+ssh -i ~/.ssh/id_ed25519_nopass vps "mkdir -p $vps_capture_dir && chmod 755 $vps_capture_dir"
 
 # === TRANSFER IMAGE ON VPS ===
-scp -i ~/.ssh/id_ed25519_nopass "$output" vps:$VPS_PATH/$today/
+scp -i ~/.ssh/id_ed25519_nopass "$output" vps:$vps_capture_dir/
 
 echo "✅ Image created and transfered : $filename"

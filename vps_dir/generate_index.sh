@@ -5,9 +5,14 @@
 
 CAPTURES_DIR="/usr/local/nginx/html/live/captures"
 
-# Get today's date
+# Get today's date components
 TODAY=$(date +%Y-%m-%d)
-TODAY_DIR="$CAPTURES_DIR/$TODAY"
+YEAR=$(date +%Y)
+MONTH=$(date +%m)
+DAY=$(date +%d)
+
+# Create hierarchical directory path: YYYY/MM/DD
+TODAY_DIR="$CAPTURES_DIR/$YEAR/$MONTH/$DAY"
 
 # Check if today's directory exists
 if [ -d "$TODAY_DIR" ]; then
@@ -30,6 +35,6 @@ else
     echo "Today's directory $TODAY_DIR does not exist yet"
 fi
 
-# Also clean up old index files (older than 2 days)
+# Also clean up old index files (older than 2 days) - search in hierarchical structure
 find "$CAPTURES_DIR" -name "index.txt" -type f -mtime +2 -delete 2>/dev/null
 echo "Cleaned up old index files"
