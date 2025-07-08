@@ -30,6 +30,9 @@
     }
     </script>
     
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7662021649235674" crossorigin="anonymous"></script>
+    
     <!-- HLS.js for non-iOS browsers -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.10/hls.min.js"></script>
     
@@ -41,11 +44,6 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Advertisement Banner - Top -->
-    <!-- Advertisement space: 728x90 leaderboard banner for desktop, 320x50 mobile banner -->
-    <div class="ad-banner ad-banner--top" id="adBannerTop">
-        <!-- Ad content will be injected here -->
-    </div>
 
     <header class="header">
         <nav class="nav">
@@ -53,7 +51,7 @@
             <ul class="nav__links" id="navLinks">
                 <li><a href="#live" class="nav__link nav__link--active" data-page="live">Live Stream</a></li>
                 <li><a href="#timelapses" class="nav__link" data-page="timelapses">Timelapses</a></li>
-                <li><a href="#gallery" class="nav__link" data-page="gallery">Gallery</a></li>
+                <li><a href="https://webcam-paris.com/gallery-today.html" class="nav__link">Gallery</a></li>
             </ul>
             <button class="nav__mobile-toggle" id="mobileMenuToggle" aria-label="Toggle navigation menu">
                 <span class="nav__mobile-icon"></span>
@@ -70,10 +68,6 @@
                 <p class="hero__description">Experience the magic of Paris with our 24/7 live HD stream featuring a view of the iconic Eiffel Tower from our exclusive rooftop location.</p>
             </div>
 
-            <!-- Advertisement Banner - After Hero -->
-            <div class="ad-banner ad-banner--content" id="adBannerContent">
-                <!-- Ad content: 300x250 medium rectangle -->
-            </div>
 
             <div class="video-section">
                 <div class="video-container">
@@ -130,18 +124,8 @@
             </div>
 
             <div class="content-cards">
-                <div class="content-card">
-                    <h3 class="content-card__title">🎬 Daily Timelapses</h3>
-                    <p class="content-card__description">Watch Paris transform throughout the day with our stunning timelapse videos capturing sunrise, sunset, and the city's rhythm.</p>
-                    <a href="#timelapses" class="btn" data-page="timelapses">View Timelapses</a>
-                </div>
+               
                 
-                <div class="content-card">
-                    <h3 class="content-card__title">✨ Best Moments</h3>
-                    <p class="content-card__description">Experience special events like fireworks on Bastille Day, the Patrouille de France flyovers, and seasonal celebrations.</p>
-                    <a href="#gallery" class="btn" data-page="gallery">Explore Gallery</a>
-                </div>
-            </div>
         </section>
 
         <!-- Timelapses Section -->
@@ -190,25 +174,6 @@
                         Your browser does not support the video tag.
                     </video>
                 </div>
-            </div>
-        </section>
-
-        <!-- Gallery Section -->
-        <section class="page page--hidden" id="galleryPage" data-page="gallery">
-            <div class="hero">
-                <h1 class="hero__title">Today's Captures</h1>
-                <p class="hero__description">Live captures from today, updated every 10 minutes during daylight hours.</p>
-            </div>
-
-            <div class="gallery-info">
-                <div class="gallery-status" id="galleryStatus">
-                    <span class="status-text">Loading today's images...</span>
-                    <span class="last-update" id="lastUpdate"></span>
-                </div>
-            </div>
-
-            <div class="image-gallery" id="imageGallery">
-                <!-- Today's images will be loaded here dynamically -->
             </div>
         </section>
 
@@ -277,10 +242,6 @@
         </section>
         </main>
 
-        <!-- Advertisement Banner - Sidebar (Desktop) -->
-        <aside class="ad-sidebar" id="adSidebar">
-            <!-- Ad content: 160x600 wide skyscraper -->
-        </aside>
     </div>
 
     <footer class="footer">

@@ -1,0 +1,20 @@
+# Paris Webcam - Crontab Entries for VPS
+# Add these entries to root crontab on your VPS: sudo crontab -e
+
+# Generate static gallery every 10 minutes during all hours
+# (script internally checks for daylight hours when generating content)
+*/10 * * * * /usr/local/nginx/html/live/gallery-generator.sh >> /usr/local/nginx/html/live/logs/gallery-generator.log 2>&1
+
+# Create monthly ZIP archives at midnight on the 1st of each month
+# (creates archive for the previous month)
+0 0 1 * * /usr/local/nginx/html/live/monthly-zip.sh >> /usr/local/nginx/html/live/logs/monthly-zip.log 2>&1
+
+# Keep your existing capture generation cron job (if you have one)
+# */10 6-20 * * * /usr/local/nginx/html/live/generate_index.sh >> /usr/local/nginx/html/live/logs/generate_index.log 2>&1
+
+# Optional: Clean up old log files monthly (keep last 30 days)
+0 1 1 * * find /usr/local/nginx/html/live/logs/ -name "*.log" -mtime +30 -delete
+
+# Optional: Log rotation for main log files (weekly)
+0 2 * * 0 [ -f /usr/local/nginx/html/live/logs/gallery-generator.log ] && mv /usr/local/nginx/html/live/logs/gallery-generator.log /usr/local/nginx/html/live/logs/gallery-generator.log.old
+0 2 * * 0 [ -f /usr/local/nginx/html/live/logs/monthly-zip.log ] && mv /usr/local/nginx/html/live/logs/monthly-zip.log /usr/local/nginx/html/live/logs/monthly-zip.log.old

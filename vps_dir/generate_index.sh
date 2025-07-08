@@ -20,8 +20,12 @@ if [ -d "$TODAY_DIR" ]; then
     COUNT=$(wc -l < "$TODAY_DIR/index.txt" 2>/dev/null || echo "0")
     echo "Generated index.txt with $COUNT images"
     
-    # Set proper permissions
+    # Set proper permissions for index.txt
     chmod 644 "$TODAY_DIR/index.txt"
+    
+    # Fix permissions for all JPG files to be web-readable
+    chmod 644 "$TODAY_DIR"/*.jpg 2>/dev/null
+    echo "Fixed permissions for all JPG files"
 else
     echo "Today's directory $TODAY_DIR does not exist yet"
 fi

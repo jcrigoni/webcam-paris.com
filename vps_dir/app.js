@@ -33,7 +33,6 @@ class ParisWebcamApp {
         this.initializeVideoPlayer();
         this.initializeWeather();
         this.initializeLazyLoading();
-        this.initializeImageGallery();
         this.setupPerformanceOptimizations();
         
         console.log('App initialized successfully');
@@ -132,9 +131,14 @@ class ParisWebcamApp {
     }
 
     /**
-     * Setup native HLS for iOS Safari
+     * Setup native HLS for iOS Safari with enhanced buffering management
      */
     setupNativeHLS(video, streamUrl) {
+        // Add mobile-specific attributes
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.preload = 'none'; // Don't preload on mobile to save bandwidth
+        
         video.src = streamUrl;
         
         video.addEventListener('loadstart', () => {
@@ -163,16 +167,55 @@ class ParisWebcamApp {
             this.handleStreamError('Stream connection failed');
         });
 
+        // Enhanced stalling detection for iOS
+        let stallingTimeout = null;
         video.addEventListener('stalled', () => {
+            console.log('iOS: Video stalled');
             this.showVideoOverlay('Buffering...');
+            
+            // If stalled for more than 5 seconds on iOS, try to recover
+            stallingTimeout = setTimeout(() => {
+                console.log('iOS: Attempting recovery from stall');
+                video.load(); // Reload the video element
+            }, 5000);
         });
 
         video.addEventListener('waiting', () => {
+            console.log('iOS: Video waiting for data');
             this.showVideoOverlay('Buffering...');
         });
 
         video.addEventListener('playing', () => {
+            console.log('iOS: Video playing');
             this.hideVideoOverlay();
+            
+            // Clear stalling timeout
+            if (stallingTimeout) {
+                clearTimeout(stallingTimeout);
+                stallingTimeout = null;
+            }
+        });
+
+        video.addEventListener('progress', () => {
+            // Clear stalling timeout when progress is made
+            if (stallingTimeout) {
+                clearTimeout(stallingTimeout);
+                stallingTimeout = null;
+            }
+        });
+
+        // Monitor buffer health on iOS
+        video.addEventListener('timeupdate', () => {
+            if (video.buffered.length > 0) {
+                const bufferEnd = video.buffered.end(video.buffered.length - 1);
+                const currentTime = video.currentTime;
+                const bufferAhead = bufferEnd - currentTime;
+                
+                // Log buffer status for debugging
+                if (bufferAhead < 1) {
+                    console.log('iOS: Low buffer warning, buffer ahead:', bufferAhead);
+                }
+            }
         });
     }
 
@@ -192,24 +235,37 @@ class ParisWebcamApp {
         }
 
         const hls = new Hls({
-            // Mobile-optimized configuration
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 30, // Reduced from 90 for mobile
-            maxBufferLength: 60,  // Reduced buffer
-            maxMaxBufferLength: 120,
-            liveSyncDurationCount: 2,
-            liveMaxLatencyDurationCount: 5,
+            // Aggressive mobile optimization for iPhone
+            enableWorker: false, // Disable web worker on mobile for better compatibility
+            lowLatencyMode: false, // Disable for mobile stability
             
-            // Mobile network optimization
-            manifestLoadingTimeOut: 10000,
-            manifestLoadingMaxRetry: 3,
-            segmentLoadingTimeOut: 8000,
-            segmentLoadingMaxRetry: 2,
+            // Very conservative buffer settings for iPhone
+            backBufferLength: 10, // Very small back buffer
+            maxBufferLength: 20,  // Minimal forward buffer
+            maxMaxBufferLength: 30, // Very small max buffer
             
-            // Reduce startup delay
-            startLevel: -1, // Auto quality
-            testBandwidth: false
+            // Reduced sync settings for mobile
+            liveSyncDurationCount: 1,
+            liveMaxLatencyDurationCount: 2,
+            
+            // Aggressive timeout settings for mobile networks
+            manifestLoadingTimeOut: 5000, // Shorter timeout
+            manifestLoadingMaxRetry: 2,   // Fewer retries
+            segmentLoadingTimeOut: 4000,  // Shorter segment timeout
+            segmentLoadingMaxRetry: 1,    // Single retry only
+            
+            // Quality and startup optimization
+            startLevel: 0, // Start with lowest quality on mobile
+            testBandwidth: false,
+            
+            // Additional mobile-specific settings
+            maxLoadingDelay: 2,
+            maxBufferSize: 30 * 1000 * 1000, // 30MB max buffer size
+            maxBufferHole: 0.3,
+            
+            // Fragment loading optimization
+            fragLoadingTimeOut: 3000,
+            fragLoadingMaxRetry: 1
         });
 
         this.hls = hls;
@@ -285,24 +341,54 @@ class ParisWebcamApp {
             }
         });
 
-        // Buffer management for mobile
+        // Aggressive buffer management for mobile
         hls.on(Hls.Events.BUFFER_APPENDED, () => {
             const device = this.detectDevice();
             if (device.isMobile && video.buffered.length > 0) {
                 const bufferEnd = video.buffered.end(video.buffered.length - 1);
                 const currentTime = video.currentTime;
                 
-                // Keep buffer small on mobile
-                if (bufferEnd - currentTime > 30) {
+                // Keep buffer very small on mobile (10 seconds max)
+                if (bufferEnd - currentTime > 10) {
                     try {
                         hls.trigger(Hls.Events.BUFFER_FLUSHING, {
                             startOffset: 0,
-                            endOffset: currentTime - 5
+                            endOffset: currentTime - 2
                         });
                     } catch (e) {
                         console.log('Buffer flush failed:', e);
                     }
                 }
+            }
+        });
+
+        // Additional mobile optimization - monitor buffer health
+        hls.on(Hls.Events.BUFFER_CREATED, () => {
+            const device = this.detectDevice();
+            if (device.isMobile) {
+                console.log('Buffer created for mobile device');
+            }
+        });
+
+        // Handle stalling on mobile more aggressively  
+        let stallTimeout = null;
+        hls.on(Hls.Events.WAITING_FOR_LEVEL, () => {
+            const device = this.detectDevice();
+            if (device.isMobile) {
+                this.showVideoOverlay('Buffering...');
+                
+                // Clear any existing timeout
+                if (stallTimeout) {
+                    clearTimeout(stallTimeout);
+                }
+                
+                // If still waiting after 3 seconds on mobile, try to recover
+                stallTimeout = setTimeout(() => {
+                    console.log('Mobile: Attempting recovery from stall');
+                    if (hls && !hls.destroyed) {
+                        hls.recoverMediaError();
+                    }
+                }, 3000);
             }
         });
     }
@@ -427,7 +513,7 @@ class ParisWebcamApp {
      */
     navigateToPage(page, updateHistory = true) {
         // Valid pages
-        const validPages = ['live', 'timelapses', 'gallery', 'privacy', 'terms'];
+        const validPages = ['live', 'timelapses', 'privacy', 'terms'];
         
         if (!validPages.includes(page)) {
             page = 'live';
@@ -489,7 +575,6 @@ class ParisWebcamApp {
         const titles = {
             live: 'Webcam Paris - Live Eiffel Tower Stream',
             timelapses: 'Timelapses | Webcam Paris',
-            gallery: 'Gallery | Webcam Paris',
             privacy: 'Privacy Policy | Webcam Paris',
             terms: 'Terms of Service | Webcam Paris'
         };
@@ -501,13 +586,11 @@ class ParisWebcamApp {
      * Load content for specific page (lazy loading)
      */
     loadPageContent(page) {
-        if (page === 'timelapses' || page === 'gallery') {
+        if (page === 'timelapses') {
             this.loadLazyMedia();
         }
         
-        if (page === 'gallery') {
-            this.loadTodaysImages();
-        }
+        // Gallery now uses static HTML, no dynamic loading needed
     }
 
     /**
@@ -708,6 +791,10 @@ class ParisWebcamApp {
         document.addEventListener('click', (e) => {
             const navLink = e.target.closest('[data-page]');
             if (navLink) {
+                // Don't intercept external links
+                if (e.target.tagName === 'A' && e.target.getAttribute('href') && !e.target.getAttribute('href').startsWith('#')) {
+                    return; // Allow normal link behavior for external links
+                }
                 e.preventDefault();
                 const page = navLink.getAttribute('data-page');
                 this.navigateToPage(page);
@@ -744,276 +831,8 @@ class ParisWebcamApp {
                 });
             }
         });
-    }
 
-    /**
-     * Initialize image gallery for today's captures
-     */
-    initializeImageGallery() {
-        this.galleryUpdateInterval = null;
-        this.currentImages = [];
-        
-        // Load gallery when gallery page is accessed
-        if (this.currentPage === 'gallery') {
-            this.loadTodaysImages();
-        }
-        
-        // Set up auto-refresh every 10 minutes
-        this.galleryUpdateInterval = setInterval(() => {
-            if (this.currentPage === 'gallery') {
-                this.loadTodaysImages();
-            }
-        }, 10 * 60 * 1000);
-    }
-
-    /**
-     * Load today's captured images
-     */
-    async loadTodaysImages() {
-        const galleryStatus = document.getElementById('galleryStatus');
-        const imageGallery = document.getElementById('imageGallery');
-        
-        if (!galleryStatus || !imageGallery) return;
-
-        try {
-            const today = new Date().toISOString().split('T')[0];
-            const capturesPath = `/live/captures/${today}/`;
-            
-            console.log(`Loading images for today: ${today}`);
-            console.log(`Captures path: ${capturesPath}`);
-            
-            // Update status
-            galleryStatus.querySelector('.status-text').textContent = 'Loading today\'s images...';
-            
-            // First try to fetch a directory listing file if it exists
-            let images = await this.fetchFromDirectoryListing(capturesPath);
-            
-            // If no directory listing, fall back to checking individual images
-            if (images.length === 0) {
-                console.log('No directory listing found, checking individual images...');
-                images = await this.fetchTodaysImageList(capturesPath);
-            }
-            
-            console.log(`Found ${images.length} images:`, images);
-            
-            if (images.length === 0) {
-                this.displayNoImagesMessage();
-                return;
-            }
-            
-            // Sort images by time (newest first)
-            images.sort((a, b) => b.localeCompare(a));
-            
-            // Update gallery if images have changed
-            if (JSON.stringify(images) !== JSON.stringify(this.currentImages)) {
-                this.currentImages = images;
-                this.displayImages(images, capturesPath);
-            }
-            
-            // Update status
-            galleryStatus.querySelector('.status-text').textContent = `${images.length} images captured today`;
-            document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-            
-        } catch (error) {
-            console.error('Failed to load today\'s images:', error);
-            this.displayErrorMessage();
-        }
-    }
-
-    /**
-     * Try to fetch images from a directory listing file
-     */
-    async fetchFromDirectoryListing(capturesPath) {
-        try {
-            // Try to fetch a simple directory listing file
-            const response = await fetch(`${capturesPath}index.txt`, {
-                headers: { 'Cache-Control': 'no-cache' }
-            });
-            
-            if (response.ok) {
-                const text = await response.text();
-                const images = text.split('\n')
-                    .filter(line => line.trim().length > 0)
-                    .filter(line => line.endsWith('.jpg'))
-                    .map(line => line.trim());
-                
-                console.log('Found directory listing with images:', images);
-                return images;
-            }
-        } catch (e) {
-            console.log('No directory listing file found');
-        }
-        return [];
-    }
-
-    /**
-     * Fetch list of today's images
-     */
-    async fetchTodaysImageList(capturesPath) {
-        const images = [];
-        const today = new Date().toISOString().split('T')[0];
-        const now = new Date();
-        
-        // Generate possible image names for today (every 10 minutes from 6 AM to 8 PM)
-        const startHour = 6;
-        const endHour = 20;
-        
-        // Create array of all possible image times for today
-        const possibleImages = [];
-        for (let hour = startHour; hour <= endHour; hour++) {
-            for (let minute = 0; minute < 60; minute += 10) {
-                const imageTime = new Date();
-                imageTime.setHours(hour, minute, 0, 0);
-                
-                // Only check for images from times that have already passed
-                if (imageTime <= now) {
-                    const timeStr = `${hour.toString().padStart(2, '0')}-${minute.toString().padStart(2, '0')}-00`;
-                    const filename = `image_${today}_${timeStr}.jpg`;
-                    possibleImages.push(filename);
-                }
-            }
-        }
-        
-        // Check each possible image in parallel with timeout
-        const imageChecks = possibleImages.map(async (filename) => {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-                
-                const response = await fetch(`${capturesPath}${filename}`, { 
-                    method: 'HEAD',
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (response.ok) {
-                    return filename;
-                }
-            } catch (e) {
-                // Image doesn't exist or network error, return null
-            }
-            return null;
-        });
-        
-        // Wait for all checks to complete
-        const results = await Promise.all(imageChecks);
-        
-        // Filter out null results
-        const existingImages = results.filter(filename => filename !== null);
-        
-        console.log(`Found ${existingImages.length} images for today:`, existingImages);
-        
-        return existingImages;
-    }
-
-    /**
-     * Display images in the gallery
-     */
-    displayImages(images, basePath) {
-        const imageGallery = document.getElementById('imageGallery');
-        if (!imageGallery) return;
-        
-        imageGallery.innerHTML = '';
-        
-        images.forEach((filename, index) => {
-            const imageItem = document.createElement('div');
-            imageItem.className = 'gallery-item';
-            
-            // Extract time from filename for display
-            const timeMatch = filename.match(/image_\d{4}-\d{2}-\d{2}_(\d{2})-(\d{2})-(\d{2})\.jpg/);
-            const timeDisplay = timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : 'Unknown time';
-            
-            imageItem.innerHTML = `
-                <div class="gallery-item__image-container">
-                    <img 
-                        class="gallery-item__image" 
-                        data-src="${basePath}${filename}"
-                        alt="Paris webcam capture at ${timeDisplay}"
-                        loading="lazy"
-                    >
-                    <div class="gallery-item__overlay">
-                        <button class="gallery-item__fullscreen" onclick="openImageFullscreen('${basePath}${filename}')">
-                            📱 View Full Size
-                        </button>
-                    </div>
-                </div>
-                <div class="gallery-item__info">
-                    <span class="gallery-item__time">${timeDisplay}</span>
-                    <span class="gallery-item__index">${index + 1}/${images.length}</span>
-                </div>
-            `;
-            
-            imageGallery.appendChild(imageItem);
-        });
-        
-        // Initialize lazy loading for new images
-        this.initializeLazyLoadingForGallery();
-    }
-
-    /**
-     * Display message when no images are available
-     */
-    displayNoImagesMessage() {
-        const imageGallery = document.getElementById('imageGallery');
-        const galleryStatus = document.getElementById('galleryStatus');
-        
-        if (imageGallery) {
-            imageGallery.innerHTML = `
-                <div class="gallery-message">
-                    <h3>No captures available yet today</h3>
-                    <p>Images are captured every 10 minutes during daylight hours (6 AM - 8 PM).</p>
-                    <p>Check back during daylight hours to see today's captures!</p>
-                </div>
-            `;
-        }
-        
-        if (galleryStatus) {
-            galleryStatus.querySelector('.status-text').textContent = 'No images captured today yet';
-        }
-    }
-
-    /**
-     * Display error message
-     */
-    displayErrorMessage() {
-        const imageGallery = document.getElementById('imageGallery');
-        const galleryStatus = document.getElementById('galleryStatus');
-        
-        if (imageGallery) {
-            imageGallery.innerHTML = `
-                <div class="gallery-message gallery-message--error">
-                    <h3>Unable to load images</h3>
-                    <p>There was an issue loading today's captures. Please try refreshing the page.</p>
-                </div>
-            `;
-        }
-        
-        if (galleryStatus) {
-            galleryStatus.querySelector('.status-text').textContent = 'Error loading images';
-        }
-    }
-
-    /**
-     * Initialize lazy loading specifically for gallery images
-     */
-    initializeLazyLoadingForGallery() {
-        if ('IntersectionObserver' in window) {
-            const galleryObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        this.loadMediaElement(entry.target);
-                        galleryObserver.unobserve(entry.target);
-                    }
-                });
-            }, {
-                rootMargin: '100px 0px',
-                threshold: 0.01
-            });
-
-            const galleryImages = document.querySelectorAll('.gallery-item__image[data-src]');
-            galleryImages.forEach(img => galleryObserver.observe(img));
-        }
+        // Gallery reload button removed - using static gallery now
     }
 
     /**
@@ -1030,10 +849,6 @@ class ParisWebcamApp {
         
         if (this.statusUpdateInterval) {
             clearInterval(this.statusUpdateInterval);
-        }
-        
-        if (this.galleryUpdateInterval) {
-            clearInterval(this.galleryUpdateInterval);
         }
     }
 }
