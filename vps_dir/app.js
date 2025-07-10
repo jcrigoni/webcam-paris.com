@@ -686,7 +686,7 @@ class ParisWebcamApp {
     async fetchWeather() {
         try {
             const response = await fetch(
-                'https://api.openweathermap.org/data/2.5/weather?q=Paris&appid=9393ff701ada56eb0e753b9d76684cb2&units=metric',
+                'https://api.openweathermap.org/data/2.5/weather?q=Paris&appid={openweather_api_key}&units=metric',
                 { timeout: 10000 }
             );
             
