@@ -3,12 +3,12 @@
 # Configuration
 PIDFILE="/tmp/stream.pid"
 # Changed log location to user's home directory
-LOGFILE="/home/jc/dev/wp-local/logs/stream.log"
-FFMPEG_LOGFILE="/home/jc/dev/wp-local/logs/ffmpeg_output.log"
+LOGFILE="/home/user/dev/wp-local/logs/stream.log"
+FFMPEG_LOGFILE="/home/user/dev/wp-local/logs/ffmpeg_output.log"
 STATSFILE="/tmp/stream_stats.txt"
-RTSP_SOURCE="rtsp://admin:grospoulet667@192.168.1.144:554/h264Preview_01_main"
-RTMP_DESTINATION="rtmp://93.127.163.199/live/stream"
-RTMP_HOST="93.127.163.199"
+RTSP_SOURCE="rtsp://{camera_ip}/h264Preview_01_main"
+RTMP_DESTINATION="rtmp://{vps_ip}/live/stream"
+RTMP_HOST="{vps_ip}"
 RTMP_PORT="1935"
 
 # Health check interval (seconds)
