@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # === CONFIGURATION ===
-RTSP_URL="rtsp://admin:grospoulet667@192.168.1.144:554/h264Preview_01_main"
-OUTPUT_DIR="/home/jc/dev/wp-local/captures"
+RTSP_URL="rtsp://{camera_ip}/h264Preview_01_main"
+OUTPUT_DIR="/home/user/dev/wp-local/captures"
 VPS_PATH="/usr/local/nginx/html/live/captures"
 LAT=48.8566
 LON=2.3522
@@ -58,9 +58,9 @@ fi
 
 # === CREATE DIRECTORY ON VPS ===
 vps_capture_dir="$VPS_PATH/$year/$month/$day"
-ssh -i ~/.ssh/id_ed25519_nopass vps "mkdir -p $vps_capture_dir && chmod 755 $vps_capture_dir"
+ssh -i {which_key} vps "mkdir -p $vps_capture_dir && chmod 755 $vps_capture_dir"
 
 # === TRANSFER IMAGE ON VPS ===
-scp -i ~/.ssh/id_ed25519_nopass "$output" vps:$vps_capture_dir/
+scp -i {which_key} "$output" vps:$vps_capture_dir/
 
 echo "✅ Image created and transfered : $filename"
